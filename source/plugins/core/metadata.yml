@@ -538,6 +538,9 @@ inputs:
       - `--cakeday`: simulate registration anniversary
       - `--halloween`: enable halloween colors *(only first color scheme will be applied if multiple are specified)*
       - `--winter`: enable winter colors *(only first color scheme will be applied if multiple are specified)*
+      - `--aura`: enable aura colors *(only first color scheme will be applied if multiple are specified)*
+      - `--hide-title`: hide the calendar title
+      - `--custom-title`: sets the custom calendar title
       - `--error`: force render error
       - `--puppeteer-debug`: enable puppeteer debug mode\*
       - `--puppeteer-disable-headless`: disable puppeteer headless mode *(requires a graphical environment)*\*
@@ -555,6 +558,9 @@ inputs:
     values:
       - --cakeday
       - --halloween
+      - --aura
+      - --hide-title
+      - --custom-title
       - --winter
       - --error
       - --puppeteer-debug

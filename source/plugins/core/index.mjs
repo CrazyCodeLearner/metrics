@@ -144,8 +144,14 @@ export default async function({login, q}, {conf, data, rest, graphql, plugins, q
     console.debug(`metrics/compute/${login} > applying dflag --cakeday`)
     computed.cakeday = true
   }
-  if ((dflags.includes("--halloween")) || (dflags.includes("--winter"))) {
-    const color = dflags.find(color => ["--halloween", "--winter"].includes(color)).replace("--", "")
+
+  if (dflags.includes("--hide-title")) {
+    console.debug(`metrics/compute/${login} > applying dflag --hide-title`)
+    data.plugins.isocalendar_hide_title = true;
+  }
+
+  if (dflags.includes("--halloween") || dflags.includes("--winter") || dflags.includes("--aura")) {
+    const color = dflags.find(color => ["--halloween", "--winter", "--aura"].includes(color)).replace("--", "")
     console.debug(`metrics/compute/${login} > applying dflag --halloween`)
     //Color replacer
     const replace = content =>
@@ -158,6 +164,7 @@ export default async function({login, q}, {conf, data, rest, graphql, plugins, q
     //Update contribution calendar colors
     computed.calendar.map(day => day.color = replace(day.color))
     //Update calendars colors
+    data.plugins.isocalendar_theme = color;
     const waiting = [...pending]
     pending.push((async () => {
       await Promise.all(waiting)

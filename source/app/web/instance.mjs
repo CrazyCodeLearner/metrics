@@ -444,9 +444,10 @@ export default async function({sandbox = false} = {}) {
       }
 
       //Read cached data if possible
-      if ((!debug) && (cached) && (cache.get(login))) {
+      if ((!debug) && (cached) && (cache.get(req.path + req.query))) {
+        console.debug("😍 => app.get => req.path:", req.path + req.query)
         console.debug(`metrics/app/${login} > using cached image`)
-        const {rendered, mime} = cache.get(login)
+        const {rendered, mime} = cache.get(req.path + req.query)
         res.header("Content-Type", mime)
         return res.send(rendered)
       }
@@ -494,7 +495,7 @@ export default async function({sandbox = false} = {}) {
         //Cache
         if ((!debug) && (cached)) {
           const maxage = Math.round(Number(req.query.cache))
-          cache.put(login, {rendered, mime}, maxage > 0 ? maxage : cached)
+          cache.put(req.path, {rendered, mime}, maxage > 0 ? maxage : cached)
         }
         //Send response
         res.header("Content-Type", mime)
