@@ -1,9 +1,6 @@
 //Imports
-import octokit from "@octokit/graphql";
-import OctokitRest from "@octokit/rest";
 import cache from "memory-cache";
-import util from "util";
-import metrics from "../metrics/index.mjs";
+import generateSVG from "./plugins/isocalendar/index.js";
 
 export default async function (req, res) {
   const { debug, cached, ...q } = Object.assign(
@@ -26,11 +23,14 @@ export default async function (req, res) {
     req.query
   );
 
+  const login = req.query.user;
+  console.debug("😍 => req.path:", req.path);
+
   //Read cached data if possible
-  if (!debug && cached && cache.get(req.query)) {
+  if (!debug && cached && cache.get(req.path)) {
     console.debug("😍 => app.get => req.path:", req.query);
     console.debug(`metrics/app/${login} > using cached image`);
-    const { rendered, mime } = cache.get(req.query);
+    const { rendered, mime } = cache.get(req.path);
     res.header("Content-Type", mime);
     return res.send(rendered);
   }
@@ -38,39 +38,13 @@ export default async function (req, res) {
   //Compute rendering
   try {
     //Prepare settings
-    console.debug(
-      `metrics/app/${login} > ${util.inspect(q, {
-        depth: Infinity,
-        maxStringLength: 256,
-      })}`
-    );
-
-    const api = {
-      graphql: octokit.graphql.defaults({
-        headers: { authorization: `token ${process.env.TOKEN}` },
-        baseUrl: "" ?? undefined,
-      }),
-      rest: new OctokitRest.Octokit({
-        auth: process.env.TOKEN,
-        baseUrl: "" ?? undefined,
-      }),
-    };
 
     // Render
-    const { rendered, mime } = await metrics(
-      { login, q },
-      {
-        api,
-        plugins,
-        // die: q["plugins.errors.fatal"] ?? false,
-        verify: q.verify ?? false,
-        convert: "svg",
-      }
-    );
+    const { rendered, mime } = await generateSVG(req);
 
     //Cache
     if (!debug && cached) {
-      const maxage = Math.round(Number(req.query.cache));
+      const maxage = Math.round(Number(q.cache_seconds));
       cache.put(req.path, { rendered, mime }, maxage > 0 ? maxage : cached);
     }
 

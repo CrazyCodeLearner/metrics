@@ -2,9 +2,10 @@ import fs from "fs";
 import path from "path";
 import ejs from "ejs";
 import graphql from "../../helpers/graphql.js";
+import { s, svg } from "../../helpers/utils.js";
 
 //Setup
-export default async function getIsoCalendar({ login, duration }) {
+async function getIsoCalendar({ user, duration }) {
   //Plugin execution
   try {
     //Load inputs
@@ -26,11 +27,11 @@ export default async function getIsoCalendar({ login, duration }) {
 
     //Compute contribution calendar, highest contributions in a day, streaks and average commits per day
     console.debug(
-      `metrics/compute/${login}/plugins > isocalendar > computing stats`
+      `metrics/compute/${user}/plugins > isocalendar > computing stats`
     );
 
     const { calendar, streak, max, average } = await statistics({
-      login,
+      user,
       start,
       end: now,
     });
@@ -43,7 +44,7 @@ export default async function getIsoCalendar({ login, duration }) {
 
     //Compute SVG
     console.debug(
-      `metrics/compute/${login}/plugins > isocalendar > computing svg render`
+      `metrics/compute/${user}/plugins > isocalendar > computing svg render`
     );
     const size = 6;
     let i = 0;
@@ -91,7 +92,7 @@ export default async function getIsoCalendar({ login, duration }) {
 }
 
 /**Compute max and current streaks */
-async function statistics({ login, start, end }) {
+async function statistics({ user, start, end }) {
   let average = 0;
   let max = 0;
   const streak = { max: 0, current: 0 };
@@ -112,7 +113,7 @@ async function statistics({ login, start, end }) {
     dto.setUTCMilliseconds(999);
     //Fetch data from api
     console.debug(
-      `metrics/compute/${login}/plugins > isocalendar > loading calendar from "${from.toISOString()}" to "${dto.toISOString()}"`
+      `metrics/compute/${user}/plugins > isocalendar > loading calendar from "${from.toISOString()}" to "${dto.toISOString()}"`
     );
 
     const {
@@ -121,8 +122,8 @@ async function statistics({ login, start, end }) {
           contributionCalendar: { weeks },
         },
       },
-    } = await graphql("calendar", {
-      login,
+    } = await graphql(path.join(__dirname, "calendar"), {
+      login: user,
       from: from.toISOString(),
       to: dto.toISOString(),
     });
@@ -151,13 +152,18 @@ async function statistics({ login, start, end }) {
   return { streak, max, average, calendar };
 }
 
-import express from "express";
-const app = express();
-const port = 3000;
-
 console.debug("😍 => app.get =>  ", path.resolve("."));
-// Define a route that renders an EJS template
-app.get("/", async (req, res) => {
+// module.mjs
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+console.log("__filename:", __filename);
+console.log("__dirname:", __dirname);
+
+export default async function generateSvg({ query }) {
   // Render the 'index.ejs' template
   const plugins = {
     isocalendar: {
@@ -173,43 +179,32 @@ app.get("/", async (req, res) => {
   };
 
   plugins.isocalendar = await getIsoCalendar({
-    login: "crazycodelearner",
-    duration: req.query.duration || "half-year",
+    user: query.user,
+    duration: query.duration || "half-year",
   });
 
-  const template = fs.readFileSync("image.ejs").toString("utf8");
-  console.debug("😍 => app.get =>  ", path.resolve("."));
+  console.debug("😍 => app.get =>  ", path.resolve(__dirname, "."));
 
-  console.debug("😍 => app.get => req.query:", req.query);
+  const template = fs
+    .readFileSync(path.join(__dirname, "image.ejs"))
+    .toString("utf8");
+
+  console.debug("😍 => app.get => query:", query);
   let rendered = await ejs.render(
     template,
     {
+      s,
+      query,
       plugins,
       classes: "",
       width: "480px",
-      s: (v) => (parseInt(v) <= 1 ? "" : "s"),
-      query: req.query,
-      colors: req.query.colors?.split(",") || [],
+      colors: query.colors?.split(",") || [],
     },
-    { async: true, root: path.resolve(".") }
+    { async: true, root: __dirname }
   );
-  // console.debug("😍 => app.get => rendered:", rendered);
 
-  //Additional transformations
-  // if (q["config.twemoji"])
-  // rendered = await imports.svg.twemojis(rendered);
-  // // if (q["config.octicon"])
-  // rendered = await imports.svg.octicons(rendered);
+  //Optimize rendering
+  rendered = await svg.optimize.css(rendered);
 
-  // //Optimize rendering
-  // rendered = await imports.svg.optimize.css(rendered);
-  // rendered = await imports.svg.optimize.svg(rendered, {});
-
-  res.header("Content-Type", "image/svg+xml; charset=utf-8");
-  return res.send(rendered);
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+  return { rendered, mime: "image/svg+xml; charset=utf-8" };
+}
