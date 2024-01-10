@@ -1,11 +1,13 @@
+import fs from "fs";
+import path from "path";
+import ejs from "ejs";
 import graphql from "../../helpers/graphql.js";
 
 //Setup
-export default async function getIsoCalendar({ login, q: query }) {
+export default async function getIsoCalendar({ login, duration }) {
   //Plugin execution
   try {
     //Load inputs
-    let { duration } = query;
 
     //Compute start day
     const now = new Date();
@@ -149,11 +151,65 @@ async function statistics({ login, start, end }) {
   return { streak, max, average, calendar };
 }
 
-(async () => {
-  console.log(
-    await getIsoCalendar({
-      login: "crazycodelearner",
-      q: { duration: "half-year" },
-    })
+import express from "express";
+const app = express();
+const port = 3000;
+
+console.debug("😍 => app.get =>  ", path.resolve("."));
+// Define a route that renders an EJS template
+app.get("/", async (req, res) => {
+  // Render the 'index.ejs' template
+  const plugins = {
+    isocalendar: {
+      streak: {
+        max: 12,
+        current: 11,
+      },
+      max: 0,
+      average: 5,
+      svg: "",
+      duration: "half-year",
+    },
+  };
+
+  plugins.isocalendar = await getIsoCalendar({
+    login: "crazycodelearner",
+    duration: req.query.duration || "half-year",
+  });
+
+  const template = fs.readFileSync("image.ejs").toString("utf8");
+  console.debug("😍 => app.get =>  ", path.resolve("."));
+
+  console.debug("😍 => app.get => req.query:", req.query);
+  let rendered = await ejs.render(
+    template,
+    {
+      plugins,
+      classes: "",
+      width: "480px",
+      s: (v) => (parseInt(v) <= 1 ? "" : "s"),
+      query: req.query,
+      colors: req.query.colors?.split(",") || [],
+    },
+    { async: true, root: path.resolve(".") }
   );
-})();
+  // console.debug("😍 => app.get => rendered:", rendered);
+
+  //Additional transformations
+  // if (q["config.twemoji"])
+  // rendered = await imports.svg.twemojis(rendered);
+  // // if (q["config.octicon"])
+  // rendered = await imports.svg.octicons(rendered);
+
+  // //Optimize rendering
+  // rendered = await imports.svg.optimize.css(rendered);
+  // rendered = await imports.svg.optimize.svg(rendered, {});
+
+  res.header("Content-Type", "image/svg+xml; charset=utf-8");
+  return res.send(rendered);
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+});

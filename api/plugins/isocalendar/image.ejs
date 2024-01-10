@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="<%= classes %>" width="<%= width %>" height="99999">
+  <%- await include("/partials/style.ejs") %>
+
+  <foreignObject x="0" y="0" width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml" xmlns:xlink="http://www.w3.org/1999/xlink" class="items-wrapper">
+      <%- await include("/partials/isocalendar.ejs") %>
+    </div>
+    <div id="metrics-end"></div>
+  </foreignObject>
+
+</svg>
