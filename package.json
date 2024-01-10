@@ -22,6 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/lowlighter/metrics.git"
   },
+  "type": "module",
   "author": "lowlighter",
   "license": "MIT",
   "bugs": {
